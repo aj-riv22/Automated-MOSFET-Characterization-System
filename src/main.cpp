@@ -35,17 +35,13 @@ void loop() {
     int readBit = analogRead(analogReadPin);
     readVoltage[i] = readBit * (5.121 / 16383.0);
 
-    //input / write values
-    Serial.print("- DAC Value: ");
-    Serial.print(writeBit[i]);
-    Serial.print(" | Applied Voltage: ");
+    // write values
+    Serial.print("Applied Voltage: ");
     Serial.print(writeVoltage[i]);
     Serial.println(" VDC");
     
-    // output / read values
-    Serial.print("- Read Bit Value: ");
-    Serial.print(readBit);
-    Serial.print(" | Sensed Voltage: ");
+    // read values
+    Serial.print("Sensed Voltage: ");
     Serial.print(readVoltage[i], 3);
     Serial.println(" VDC");
     
