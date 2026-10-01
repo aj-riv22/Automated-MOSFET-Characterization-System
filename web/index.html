@@ -1,0 +1,625 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f5f2">
+  <title>MOSFET Characterization | Bench Console</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: #f4f5f2;
+      --white: #fff;
+      --ink: #202827;
+      --muted: #687371;
+      --line: #d9dfdb;
+      --green: #176b55;
+      --green-bright: #28a47a;
+      --red: #bd5a4b;
+      --button-text: #fff;
+      --grid-mark: rgba(32, 40, 39, .025);
+      --chart-grid: #e7ebe8;
+      --chart-axis: #aeb9b3;
+      --chart-label: #76817c;
+      --chart-line: #176b55;
+      --chart-point-fill: #fff;
+      --hover-surface: rgba(255,255,255,.65);
+      --mono: "Consolas", "SFMono-Regular", monospace;
+      --serif: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+    }
+
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --paper: #18211d;
+      --white: #202c27;
+      --ink: #e2eae4;
+      --muted: #a1afa7;
+      --line: #3a4a42;
+      --green: #70cba5;
+      --green-bright: #72d4ad;
+      --red: #f09b8b;
+      --button-text: #10261c;
+      --grid-mark: rgba(226, 234, 228, .035);
+      --chart-grid: #35433c;
+      --chart-axis: #627168;
+      --chart-label: #a6b3aa;
+      --chart-line: #73d4ad;
+      --chart-point-fill: #18211d;
+      --hover-surface: rgba(255,255,255,.06);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      color: var(--ink);
+      background-color: var(--paper);
+      background-image: linear-gradient(var(--grid-mark) 1px, transparent 1px), linear-gradient(90deg, var(--grid-mark) 1px, transparent 1px);
+      background-size: 28px 28px;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+    }
+
+    button { font: inherit; }
+    .shell { max-width: 1440px; margin: 0 auto; padding: 0 42px; }
+    .topbar {
+      height: 68px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--line);
+    }
+    .wordmark { display: flex; align-items: center; gap: 11px; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+    .wordmark-separator { color: var(--muted); }
+    .mark { width: 25px; height: 25px; display: grid; place-items: center; background: var(--green); color: var(--button-text); font-family: var(--mono); font-size: 12px; }
+    .top-meta { display: flex; align-items: center; gap: 9px; color: var(--muted); font-family: var(--mono); font-size: 11px; }
+    .top-actions { display: flex; align-items: center; gap: 22px; }
+    .theme-toggle { padding: 7px 10px; border: 1px solid var(--line); border-radius: 3px; background: transparent; color: var(--ink); cursor: pointer; font-size: 11px; }
+    .theme-toggle:hover { background: var(--hover-surface); }
+    .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #9ba5a1; }
+    .live-dot.active { background: var(--green-bright); box-shadow: 0 0 0 3px rgba(40, 164, 122, .13); }
+
+    main { padding: 44px 0 52px; }
+    .heading-row { display: flex; justify-content: space-between; align-items: end; gap: 24px; margin-bottom: 27px; }
+    .eyebrow { margin: 0 0 10px; color: var(--green); font-family: var(--mono); font-size: 10px; letter-spacing: .11em; text-transform: uppercase; }
+    h1 { margin: 0; font-family: var(--serif); font-size: 44px; font-weight: 500; line-height: 1.05; letter-spacing: 0; }
+    .subtitle { margin: 10px 0 0; color: var(--muted); font-size: 14px; }
+    .run-index { padding-bottom: 4px; color: var(--muted); font-family: var(--mono); font-size: 11px; white-space: nowrap; }
+    .controlbar { display: flex; align-items: center; gap: 12px; padding: 14px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .primary, .secondary {
+      min-height: 40px;
+      padding: 0 15px;
+      border: 1px solid var(--green);
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 650;
+      transition: background .15s, color .15s, border-color .15s;
+    }
+    .primary { background: var(--green); color: var(--button-text); }
+    .primary:hover { background: #105943; }
+    .secondary { border-color: var(--line); background: transparent; color: var(--ink); }
+    .secondary:hover:not(:disabled) { border-color: #899690; background: var(--hover-surface); }
+    button:disabled { cursor: not-allowed; opacity: .42; }
+    .serial-config { display: flex; align-items: center; gap: 9px; margin-left: 10px; color: var(--muted); font-family: var(--mono); font-size: 11px; }
+    .serial-config strong { color: var(--ink); font-weight: 500; }
+    .status { display: flex; align-items: center; gap: 8px; margin-left: auto; color: var(--muted); font-size: 12px; }
+    .status[data-kind="error"] { color: var(--red); }
+    .status[data-kind="success"] { color: var(--green); }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+
+    .metrics { display: grid; grid-template-columns: repeat(3, 1fr); margin: 28px 0 34px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .metric { min-height: 83px; padding: 15px 22px 14px 0; }
+    .metric + .metric { padding-left: 23px; border-left: 1px solid var(--line); }
+    .metric-label { display: block; margin-bottom: 8px; color: var(--muted); font-family: var(--mono); font-size: 10px; letter-spacing: .04em; text-transform: uppercase; }
+    .metric-value { font-family: var(--serif); font-size: 26px; line-height: 1; }
+    .metric-value small { margin-left: 4px; color: var(--muted); font-family: var(--mono); font-size: 11px; }
+
+    .workspace { display: grid; grid-template-columns: minmax(0, 1fr) 310px; gap: 35px; align-items: start; }
+    .section-head { min-height: 39px; display: flex; align-items: start; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--line); }
+    h2 { margin: 0; font-family: var(--serif); font-size: 21px; font-weight: 500; }
+    .section-note { color: var(--muted); font-family: var(--mono); font-size: 10px; }
+    .chart-wrap { position: relative; height: 390px; padding-top: 14px; }
+    canvas { display: block; width: 100%; height: 100%; }
+    canvas.has-data { cursor: crosshair; }
+    .chart-tooltip { position: absolute; z-index: 2; padding: 8px 10px; border: 1px solid var(--line); border-radius: 3px; background: var(--paper); color: var(--ink); box-shadow: 0 3px 12px rgba(0,0,0,.14); font-family: var(--mono); font-size: 10px; line-height: 1.6; white-space: pre; pointer-events: none; }
+    .chart-tooltip[hidden] { display: none; }
+    .table-wrap { max-height: 440px; overflow: auto; scrollbar-color: #bdc7c1 transparent; scrollbar-width: thin; }
+    table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 11px; }
+    th { position: sticky; top: 0; z-index: 1; padding: 11px 8px; background: var(--paper); color: var(--muted); font-size: 9px; font-weight: 500; letter-spacing: .04em; text-align: right; text-transform: uppercase; }
+    th:first-child, td:first-child { width: 46px; text-align: left; }
+    td { padding: 8px; border-top: 1px solid rgba(217, 223, 219, .75); text-align: right; }
+    tbody tr:first-child td { border-top-color: var(--line); }
+    td:first-child { color: var(--muted); }
+    .table-empty { padding: 18px 8px; color: var(--muted); font-family: var(--mono); font-size: 10px; }
+    .footer { display: flex; justify-content: space-between; gap: 16px; margin-top: 23px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font-family: var(--mono); font-size: 10px; }
+
+    @media (max-width: 850px) {
+      .shell { padding: 0 25px; }
+      .workspace { grid-template-columns: minmax(0, 1fr) 260px; gap: 23px; }
+      .chart-wrap { height: 340px; }
+    }
+    @media (max-width: 650px) {
+      .shell { padding: 0 18px; }
+      main { padding-top: 32px; }
+      .heading-row { align-items: start; }
+      .run-index { padding-top: 5px; }
+      .controlbar { flex-wrap: wrap; gap: 9px; }
+      .serial-config { margin-left: 4px; }
+      .status { flex-basis: 100%; margin: 4px 0 0; }
+      .metrics { margin: 20px 0 28px; }
+      .metric { min-height: 73px; padding-right: 9px; }
+      .metric + .metric { padding-left: 12px; }
+      .metric-value { font-size: 23px; }
+      .workspace { grid-template-columns: 1fr; gap: 27px; }
+      .chart-wrap { height: 300px; }
+      .table-wrap { max-height: 260px; }
+      .footer { flex-direction: column; gap: 6px; }
+    }
+    @media (max-width: 390px) {
+      .top-actions { gap: 8px; }
+      .top-meta { font-size: 9px; }
+      .theme-toggle { padding: 6px 7px; font-size: 10px; }
+      .wordmark { font-size: 10px; }
+      .serial-config { font-size: 10px; }
+      .metric-label { font-size: 8px; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; } }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div class="wordmark"><span class="mark" aria-hidden="true">M</span> Materials Lab <span class="wordmark-separator" aria-hidden="true">/</span> Device Characterization</div>
+      <div class="top-actions">
+        <button class="theme-toggle" id="themeToggle" type="button" aria-label="Switch to dark mode">Dark mode</button>
+        <div class="top-meta"><span class="live-dot" id="connectionDot"></span><span id="connectionLabel">SERIAL OFFLINE</span></div>
+      </div>
+    </header>
+
+    <main>
+      <section class="heading-row" aria-labelledby="pageTitle">
+        <div>
+          <p class="eyebrow">Bench console <span aria-hidden="true">/</span> MOSFET study</p>
+          <h1 id="pageTitle">Voltage sweep</h1>
+          <p class="subtitle">Applied and sensed voltage characterization</p>
+        </div>
+        <div class="run-index">RUN <span id="runNumber">--</span></div>
+      </section>
+
+      <section class="controlbar" aria-label="Serial controls">
+        <button class="primary" id="startButton" type="button">Connect &amp; capture</button>
+        <button class="secondary" id="stopButton" type="button" disabled>Stop</button>
+        <button class="secondary" id="exportButton" type="button" disabled>Export CSV</button>
+        <button class="secondary" id="saveGraphButton" type="button" disabled>Save graph</button>
+        <div class="serial-config"><span>PORT</span><strong>USB serial</strong><span aria-hidden="true">/</span><span>BAUD</span><strong>115200</strong></div>
+        <div class="status" id="status" role="status" aria-live="polite"><span class="status-dot"></span><span id="statusText">Select the Arduino to begin.</span></div>
+      </section>
+
+      <section class="metrics" aria-label="Capture summary">
+        <div class="metric"><span class="metric-label">Samples received</span><span class="metric-value" id="sampleMetric">0 <small>readings</small></span></div>
+        <div class="metric"><span class="metric-label">Applied range</span><span class="metric-value" id="rangeMetric">-- <small>V</small></span></div>
+        <div class="metric"><span class="metric-label">Last sensed</span><span class="metric-value" id="lastMetric">-- <small>V</small></span></div>
+      </section>
+
+      <section class="workspace">
+        <section aria-labelledby="plotTitle">
+          <div class="section-head"><h2 id="plotTitle">Transfer response</h2><span class="section-note">SENSED VS APPLIED / V</span></div>
+          <div class="chart-wrap">
+            <canvas id="plot" aria-label="Plot of sensed voltage against applied voltage. Horizontal axis: applied voltage. Vertical axis: sensed voltage."></canvas>
+            <div class="chart-tooltip" id="chartTooltip" role="status" aria-live="polite" hidden></div>
+          </div>
+        </section>
+        <section aria-labelledby="tableTitle">
+          <div class="section-head"><h2 id="tableTitle">Latest readings</h2><span class="section-note" id="tableCount">0 total</span></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>#</th><th>Applied (V)</th><th>Sensed (V)</th></tr></thead>
+              <tbody id="readingsBody"><tr><td class="table-empty" colspan="3">No readings yet</td></tr></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+      <footer class="footer"><span>Continuous capture / recurring 51-point sweeps / 0.1 V increments</span><span>Web Serial / 115200 baud</span></footer>
+    </main>
+  </div>
+
+  <script>
+    (() => {
+      const tableRowLimit = 500;
+      const chartPointLimit = 2000;
+      const plotPadding = { left: 54, right: 14, top: 15, bottom: 50 };
+      const samples = [];
+      const startButton = document.querySelector("#startButton");
+      const stopButton = document.querySelector("#stopButton");
+      const exportButton = document.querySelector("#exportButton");
+      const saveGraphButton = document.querySelector("#saveGraphButton");
+      const status = document.querySelector("#status");
+      const statusText = document.querySelector("#statusText");
+      const connectionDot = document.querySelector("#connectionDot");
+      const connectionLabel = document.querySelector("#connectionLabel");
+      const canvas = document.querySelector("#plot");
+      const context = canvas.getContext("2d");
+      let activeReader = null;
+      let stopRequested = false;
+      let runCount = 0;
+      let appliedMin = Infinity;
+      let appliedMax = -Infinity;
+      let sensedMin = Infinity;
+      let sensedMax = -Infinity;
+      let appliedMinIndex = -1;
+      let appliedMaxIndex = -1;
+      let sensedMinIndex = -1;
+      let sensedMaxIndex = -1;
+      let selectedSampleIndex = null;
+      const themeToggle = document.querySelector("#themeToggle");
+      const chartTooltip = document.querySelector("#chartTooltip");
+
+      function setTheme(theme) {
+        const isDark = theme === "dark";
+        document.documentElement.dataset.theme = isDark ? "dark" : "light";
+        themeToggle.textContent = isDark ? "Light mode" : "Dark mode";
+        themeToggle.setAttribute("aria-label", `Switch to ${isDark ? "light" : "dark"} mode`);
+        localStorage.setItem("mosfet-theme", isDark ? "dark" : "light");
+        drawPlot();
+      }
+
+      function setStatus(message, kind = "") {
+        statusText.textContent = message;
+        status.dataset.kind = kind;
+      }
+
+      function setConnected(connected) {
+        connectionDot.classList.toggle("active", connected);
+        connectionLabel.textContent = connected ? "SERIAL CONNECTED" : "SERIAL OFFLINE";
+      }
+
+      function renderTable() {
+        const body = document.querySelector("#readingsBody");
+        body.replaceChildren();
+        if (!samples.length) {
+          const row = body.insertRow();
+          const cell = row.insertCell();
+          cell.colSpan = 3;
+          cell.className = "table-empty";
+          cell.textContent = "No readings yet";
+        } else {
+          const firstVisibleIndex = Math.max(0, samples.length - tableRowLimit);
+          for (let index = firstVisibleIndex; index < samples.length; index += 1) appendReadingRow(body, index);
+        }
+        updateReadout();
+        drawPlot();
+      }
+
+      function appendReadingRow(body, index) {
+        if (index === 0) body.replaceChildren();
+        const sample = samples[index];
+        const row = body.insertRow();
+        row.insertCell().textContent = String(index + 1).padStart(2, "0");
+        row.insertCell().textContent = sample.applied.toFixed(3);
+        row.insertCell().textContent = sample.sensed.toFixed(3);
+        if (body.rows.length > tableRowLimit) body.deleteRow(0);
+      }
+
+      function updateReadout() {
+        document.querySelector("#tableCount").textContent = `${samples.length.toLocaleString()} total`;
+        document.querySelector("#sampleMetric").innerHTML = `${samples.length.toLocaleString()} <small>readings</small>`;
+        document.querySelector("#lastMetric").innerHTML = samples.length ? `${samples[samples.length - 1].sensed.toFixed(3)} <small>V</small>` : "-- <small>V</small>";
+        document.querySelector("#rangeMetric").innerHTML = samples.length ? `${appliedMin.toFixed(3)}-${appliedMax.toFixed(3)} <small>V</small>` : "-- <small>V</small>";
+        exportButton.disabled = samples.length === 0;
+        saveGraphButton.disabled = samples.length === 0;
+      }
+
+      function getAxis(dataMin, dataMax) {
+        let min = dataMin;
+        let max = dataMax;
+        if (min === max) {
+          const spread = Math.max(Math.abs(min) * 0.1, 0.1);
+          min -= spread / 2;
+          max += spread / 2;
+        }
+
+        const padding = (max - min) * 0.08;
+        const paddedMin = min - padding;
+        const paddedMax = max + padding;
+        const roughStep = (paddedMax - paddedMin) / 5;
+        const magnitude = 10 ** Math.floor(Math.log10(roughStep));
+        const fraction = roughStep / magnitude;
+        const niceFraction = fraction <= 1 ? 1 : fraction <= 2 ? 2 : fraction <= 5 ? 5 : 10;
+        const step = niceFraction * magnitude;
+        const axisMin = dataMin >= 0 ? Math.max(0, Math.floor(paddedMin / step) * step) : Math.floor(paddedMin / step) * step;
+        const axisMax = Math.ceil(paddedMax / step) * step;
+
+        return { min: axisMin, max: axisMax > axisMin ? axisMax : axisMin + step, step };
+      }
+
+      function getPlottedSamples() {
+        if (samples.length <= chartPointLimit) return samples;
+        const lastIndex = samples.length - 1;
+        const indices = new Set([0, lastIndex, appliedMinIndex, appliedMaxIndex, sensedMinIndex, sensedMaxIndex]);
+        for (let point = 0; point < chartPointLimit; point += 1) {
+          indices.add(Math.round(point * lastIndex / (chartPointLimit - 1)));
+        }
+        return Array.from(indices).sort((left, right) => left - right).map(index => samples[index]);
+      }
+
+      function formatTick(value, step) {
+        const decimals = Math.max(0, Math.min(6, -Math.floor(Math.log10(step))));
+        return value.toFixed(decimals);
+      }
+
+      function drawPlot() {
+        const bounds = canvas.getBoundingClientRect();
+        if (!bounds.width || !bounds.height) return;
+        const ratio = window.devicePixelRatio || 1;
+        canvas.width = Math.round(bounds.width * ratio);
+        canvas.height = Math.round(bounds.height * ratio);
+        context.setTransform(ratio, 0, 0, ratio, 0, 0);
+        context.clearRect(0, 0, bounds.width, bounds.height);
+
+        const width = bounds.width - plotPadding.left - plotPadding.right;
+        const height = bounds.height - plotPadding.top - plotPadding.bottom;
+        const appliedAxis = samples.length ? getAxis(appliedMin, appliedMax) : getAxis(0, 5);
+        const sensedAxis = samples.length ? getAxis(sensedMin, sensedMax) : getAxis(0, 5);
+        const plottedSamples = getPlottedSamples();
+        const palette = getComputedStyle(document.documentElement);
+        const chartAxis = palette.getPropertyValue("--chart-axis").trim();
+        const chartGrid = palette.getPropertyValue("--chart-grid").trim();
+        const chartLabel = palette.getPropertyValue("--chart-label").trim();
+        const chartLine = palette.getPropertyValue("--chart-line").trim();
+        const chartPointFill = palette.getPropertyValue("--chart-point-fill").trim();
+        context.font = '10px Consolas, monospace';
+        context.textAlign = "right";
+        context.textBaseline = "middle";
+        const sensedTickCount = Math.round((sensedAxis.max - sensedAxis.min) / sensedAxis.step);
+        for (let index = 0; index <= sensedTickCount; index += 1) {
+          const tick = sensedAxis.min + index * sensedAxis.step;
+          const y = plotPadding.top + height - ((tick - sensedAxis.min) / (sensedAxis.max - sensedAxis.min)) * height;
+          context.beginPath();
+          context.strokeStyle = index === 0 ? chartAxis : chartGrid;
+          context.lineWidth = 1;
+          context.moveTo(plotPadding.left, y);
+          context.lineTo(plotPadding.left + width, y);
+          context.stroke();
+          context.fillStyle = chartLabel;
+          context.fillText(formatTick(tick, sensedAxis.step), plotPadding.left - 10, y);
+        }
+        context.textAlign = "center";
+        const appliedTickCount = Math.round((appliedAxis.max - appliedAxis.min) / appliedAxis.step);
+        for (let index = 0; index <= appliedTickCount; index += 1) {
+          const tick = appliedAxis.min + index * appliedAxis.step;
+          const x = plotPadding.left + ((tick - appliedAxis.min) / (appliedAxis.max - appliedAxis.min)) * width;
+          context.beginPath();
+          context.strokeStyle = chartGrid;
+          context.moveTo(x, plotPadding.top);
+          context.lineTo(x, plotPadding.top + height);
+          context.stroke();
+          context.fillStyle = chartLabel;
+          context.fillText(formatTick(tick, appliedAxis.step), x, plotPadding.top + height + 16);
+        }
+        const pointX = value => plotPadding.left + ((value - appliedAxis.min) / (appliedAxis.max - appliedAxis.min)) * width;
+        const pointY = value => plotPadding.top + height - ((value - sensedAxis.min) / (sensedAxis.max - sensedAxis.min)) * height;
+        if (samples.length) {
+          context.beginPath();
+          plottedSamples.forEach((sample, index) => {
+            const x = pointX(sample.applied);
+            const y = pointY(sample.sensed);
+            if (index === 0) context.moveTo(x, y);
+            else context.lineTo(x, y);
+          });
+          context.strokeStyle = chartLine;
+          context.lineWidth = 2;
+          context.stroke();
+          plottedSamples.forEach(sample => {
+            context.beginPath();
+            context.arc(pointX(sample.applied), pointY(sample.sensed), 3, 0, Math.PI * 2);
+            context.fillStyle = chartPointFill;
+            context.fill();
+            context.strokeStyle = chartLine;
+            context.lineWidth = 1.5;
+            context.stroke();
+          });
+        }
+        context.save();
+        context.fillStyle = chartLabel;
+        context.font = '11px "Segoe UI", sans-serif';
+        context.textAlign = "center";
+        context.textBaseline = "middle";
+        context.fillText("applied voltage", plotPadding.left + width / 2, bounds.height - 7);
+        context.translate(13, plotPadding.top + height / 2);
+        context.rotate(-Math.PI / 2);
+        context.fillText("sensed voltage", 0, 0);
+        context.restore();
+
+        canvas.classList.toggle("has-data", samples.length > 0);
+        if (selectedSampleIndex !== null && samples[selectedSampleIndex]) {
+          const sample = samples[selectedSampleIndex];
+          const x = pointX(sample.applied);
+          const y = pointY(sample.sensed);
+          context.beginPath();
+          context.arc(x, y, 7, 0, Math.PI * 2);
+          context.strokeStyle = chartLine;
+          context.lineWidth = 2;
+          context.stroke();
+          showTooltip(selectedSampleIndex, x, y);
+        } else {
+          chartTooltip.hidden = true;
+        }
+      }
+
+      function showTooltip(index, x, y) {
+        const sample = samples[index];
+        const chartWrap = canvas.parentElement;
+        const canvasBounds = canvas.getBoundingClientRect();
+        const wrapBounds = chartWrap.getBoundingClientRect();
+        chartTooltip.textContent = `Reading ${index + 1}\nApplied voltage: ${sample.applied.toFixed(3)} V\nSensed voltage: ${sample.sensed.toFixed(3)} V`;
+        chartTooltip.hidden = false;
+        let left = canvasBounds.left - wrapBounds.left + x + 12;
+        let top = canvasBounds.top - wrapBounds.top + y + 12;
+        if (left + chartTooltip.offsetWidth > chartWrap.clientWidth - 8) left -= chartTooltip.offsetWidth + 24;
+        if (top + chartTooltip.offsetHeight > chartWrap.clientHeight - 8) top -= chartTooltip.offsetHeight + 24;
+        const maxLeft = Math.max(8, chartWrap.clientWidth - chartTooltip.offsetWidth - 8);
+        const maxTop = Math.max(8, chartWrap.clientHeight - chartTooltip.offsetHeight - 8);
+        chartTooltip.style.left = `${Math.max(8, Math.min(left, maxLeft))}px`;
+        chartTooltip.style.top = `${Math.max(8, Math.min(top, maxTop))}px`;
+      }
+
+      function selectNearestSample(event) {
+        if (!samples.length) return;
+        const bounds = canvas.getBoundingClientRect();
+        const x = event.clientX - bounds.left;
+        const y = event.clientY - bounds.top;
+        const appliedAxis = getAxis(appliedMin, appliedMax);
+        const sensedAxis = getAxis(sensedMin, sensedMax);
+        const width = bounds.width - plotPadding.left - plotPadding.right;
+        const height = bounds.height - plotPadding.top - plotPadding.bottom;
+        let nearestIndex = -1;
+        let nearestDistance = Infinity;
+
+        samples.forEach((sample, index) => {
+          const sampleX = plotPadding.left + ((sample.applied - appliedAxis.min) / (appliedAxis.max - appliedAxis.min)) * width;
+          const sampleY = plotPadding.top + height - ((sample.sensed - sensedAxis.min) / (sensedAxis.max - sensedAxis.min)) * height;
+          const distance = Math.hypot(sampleX - x, sampleY - y);
+          if (distance < nearestDistance) {
+            nearestDistance = distance;
+            nearestIndex = index;
+          }
+        });
+
+        selectedSampleIndex = nearestDistance <= 18 ? nearestIndex : null;
+        drawPlot();
+      }
+
+      function addLine(line) {
+        const values = line.trim().split(",");
+        if (values.length !== 2) return;
+        const applied = Number(values[0]);
+        const sensed = Number(values[1]);
+        if (!Number.isFinite(applied) || !Number.isFinite(sensed)) return;
+        const index = samples.length;
+        samples.push({ applied, sensed });
+        if (applied < appliedMin) { appliedMin = applied; appliedMinIndex = index; }
+        if (applied > appliedMax) { appliedMax = applied; appliedMaxIndex = index; }
+        if (sensed < sensedMin) { sensedMin = sensed; sensedMinIndex = index; }
+        if (sensed > sensedMax) { sensedMax = sensed; sensedMaxIndex = index; }
+        appendReadingRow(document.querySelector("#readingsBody"), index);
+        updateReadout();
+        drawPlot();
+        setStatus(`Receiving sample ${samples.length.toLocaleString()}...`);
+      }
+
+      function readWithTimeout(reader, milliseconds) {
+        let timeoutId;
+        return Promise.race([
+          reader.read(),
+          new Promise((resolve, reject) => {
+            timeoutId = window.setTimeout(() => reject(new Error("No serial data received for 10 seconds.")), milliseconds);
+          })
+        ]).finally(() => window.clearTimeout(timeoutId));
+      }
+
+      async function capture() {
+        if (!("serial" in navigator)) {
+          setStatus("Web Serial is unavailable. Open this page in Chrome or Edge.", "error");
+          return;
+        }
+        samples.length = 0;
+        appliedMin = Infinity;
+        appliedMax = -Infinity;
+        sensedMin = Infinity;
+        sensedMax = -Infinity;
+        appliedMinIndex = -1;
+        appliedMaxIndex = -1;
+        sensedMinIndex = -1;
+        sensedMaxIndex = -1;
+        renderTable();
+        stopRequested = false;
+        runCount += 1;
+        document.querySelector("#runNumber").textContent = String(runCount).padStart(3, "0");
+        startButton.disabled = true;
+        stopButton.disabled = false;
+        setStatus("Choose the Arduino serial port...");
+        let port;
+        let reader;
+        try {
+          port = await navigator.serial.requestPort();
+          await port.open({ baudRate: 115200 });
+          setConnected(true);
+          setStatus("Listening for voltage pairs...");
+          const decoder = new TextDecoderStream();
+          const decoderClosed = port.readable.pipeTo(decoder.writable).catch(() => {});
+          reader = decoder.readable.getReader();
+          activeReader = reader;
+          let remainder = "";
+          while (!stopRequested) {
+            const { value, done } = await readWithTimeout(reader, 10000);
+            if (done) break;
+            remainder += value;
+            const lines = remainder.split(/\r?\n/);
+            remainder = lines.pop();
+            for (const line of lines) {
+              addLine(line);
+            }
+          }
+          if (stopRequested) setStatus(`Capture stopped at ${samples.length.toLocaleString()} readings.`);
+          else setStatus(`Serial stream ended after ${samples.length.toLocaleString()} readings.`, "error");
+        } catch (error) {
+          if (error.name === "NotFoundError") setStatus("No port selected.");
+          else if (error.name === "AbortError" && stopRequested) setStatus(`Capture stopped at ${samples.length.toLocaleString()} readings.`);
+          else setStatus(error.message || "Serial capture failed.", "error");
+        } finally {
+          activeReader = null;
+          if (reader) {
+            try { await reader.cancel(); } catch {}
+            reader.releaseLock();
+          }
+          if (port?.readable) {
+            try { await port.close(); } catch {}
+          }
+          setConnected(false);
+          startButton.disabled = false;
+          stopButton.disabled = true;
+        }
+      }
+
+      startButton.addEventListener("click", capture);
+      canvas.addEventListener("click", selectNearestSample);
+      themeToggle.addEventListener("click", () => {
+        setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
+      });
+      stopButton.addEventListener("click", () => {
+        if (activeReader) {
+          stopRequested = true;
+          setStatus("Stopping capture...");
+          activeReader.cancel();
+        }
+      });
+      exportButton.addEventListener("click", () => {
+        const csv = ["applied_voltage,sensed_voltage", ...samples.map(sample => `${sample.applied.toFixed(3)},${sample.sensed.toFixed(3)}`)].join("\n");
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+        link.download = "mosfet-voltage-sweep.csv";
+        link.click();
+        window.setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+      });
+      saveGraphButton.addEventListener("click", () => {
+        canvas.toBlob(blob => {
+          if (!blob) {
+            setStatus("Could not save the graph image.", "error");
+            return;
+          }
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = "mosfet-voltage-graph.png";
+          link.click();
+          window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }, "image/png");
+      });
+      new ResizeObserver(drawPlot).observe(canvas.parentElement);
+      window.addEventListener("resize", drawPlot);
+      setTheme(localStorage.getItem("mosfet-theme") === "dark" ? "dark" : "light");
+      renderTable();
+    })();
+  </script>
+</body>
+</html>

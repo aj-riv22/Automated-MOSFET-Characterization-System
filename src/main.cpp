@@ -7,14 +7,8 @@ void setup() {
   Serial.begin(115200);
   for (auto startNow = millis() + 2500; !Serial && millis() < startNow; delay(500));
   
-  // Set DAC resolution to 12-bit for maximum precision
-  analogWriteResolution(12);
-
-  // set analog read resolution to 14 bit
-  analogReadResolution(14);
-  
-//   Serial.println("Writing voltage from A0");
-//   Serial.println("Wire A0 pin and A1 pin together, to have A1 pin read in voltages from A0");
+  analogWriteResolution(12);  // set DAC resolution to 12-bit
+  analogReadResolution(14); // set analog read resolution to 14 bit
 }
 
 void loop() {
@@ -30,30 +24,19 @@ void loop() {
     writeBit[i] = (writeVoltage[i] * 4095) / 5.121; // mapping the voltage to a specific bit in the dac
     analogWrite(DAC, writeBit[i]);
 
-    // delay between writing and reading. time to settle
-    delay(10);
+    delay(10); // delay between writing and reading. giving time for the voltage to settle
 
     int readBit = analogRead(analogReadPin);
-    readVoltage[i] = readBit * (5.121 / 16383.0);
-
-    // // write values
-    // Serial.print("Applied Voltage: ");
-    // Serial.print(writeVoltage[i]);
-    // Serial.println(" VDC");
+    readVoltage[i] = readBit * (5.121 / 16383.0); // mapping the bit read to a corresponding voltage
     
-    // // read values
-    // Serial.print("Sensed Voltage: ");
-    // Serial.print(readVoltage[i], 3);
-    // Serial.println(" VDC");
+    // print the applied and sensed voltages in the format "applied_voltage,sensed_voltage"
     Serial.print(writeVoltage[i], 3);
     Serial.print(",");
     Serial.print(readVoltage[i], 3);
     Serial.println();
 
-    delay(10);  
+    delay(500); // delay between next iteration
   }
-
-//   Serial.println("- Cycle completed, repeating...");
 }
 
 // create function for writing and reading voltage
