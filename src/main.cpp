@@ -1,6 +1,7 @@
 #include <Arduino.h>
 
 const int analogReadPin = A1;
+void writeAndReadVoltage(float writeVoltage[], float readVoltage[], int numSteps, int timeDelay); // fnction to write a sequence of voltages to the DAC and read the corresponding sensed voltages
 
 void setup() {
   // Initialize serial communication and wait up to 2.5 seconds for a connection
@@ -12,34 +13,38 @@ void setup() {
 }
 
 void loop() {
-  // write
-  float writeBit[51] = {}; // 51 steps from 0 V to 5 V, 0.1 V increments
   float writeVoltage[51] = {};
-
-  // read
   float readVoltage[51] = {};
-  
-  for (int i = 0; i <= 50; i++) {
-    writeVoltage[i] = (0.1 * i);
-    writeBit[i] = (writeVoltage[i] * 4095) / 5.121; // mapping the voltage to a specific bit in the dac
-    analogWrite(DAC, writeBit[i]);
+  writeAndReadVoltage(writeVoltage, readVoltage, 51, 10); // call the function to write and read voltages
 
-    delay(10); // delay between writing and reading. giving time for the voltage to settle
-
-    int readBit = analogRead(analogReadPin);
-    readVoltage[i] = readBit * (5.121 / 16383.0); // mapping the bit read to a corresponding voltage
-    
-    // print the applied and sensed voltages in the format "applied_voltage,sensed_voltage"
+  // print the collected voltages for verification
+  for (int i = 0; i < 51; i++) {
     Serial.print(writeVoltage[i], 3);
     Serial.print(",");
     Serial.print(readVoltage[i], 3);
     Serial.println();
+  }
+  delay(1000); // delay between loop iterations
 
-    delay(500); // delay between next iteration
+}
+
+void writeAndReadVoltage(float writeVoltage[], float readVoltage[], int numSteps, int timeDelay) {
+  for (int i = 0; i < numSteps; i++) {
+    writeVoltage[i] = (0.1 * i);
+    float writeBit = (writeVoltage[i] * 4095) / 5.121; // mapping the voltage to a specific bit in the dac
+    analogWrite(DAC, writeBit);
+
+    delay(timeDelay); // delay between writing and reading. giving time for the voltage to settle
+
+    int readBit = analogRead(analogReadPin);
+    readVoltage[i] = readBit * (5.121 / 16383.0); // mapping the bit read to a corresponding voltage
+    delay(timeDelay); // delay between next iteration
   }
 }
 
-// create function for writing and reading voltage
-
 // create function for exporting data
+
+//create function for finding the threshold voltage of the MOSFET
+
+//create function for finding the kn parameter of the MOSFET
 
