@@ -2,12 +2,12 @@ port = "COM3"; % Select the Arduino's serial port.
 arduino = serialport(port, 115200, "Timeout", 10); % Open the port at 115200 baud; wait at most 10 seconds when reading.
 configureTerminator(arduino, "LF"); % Treat a line feed as the end of each incoming line.
 
-appliedVoltage = zeros(1, 51); % Preallocate space for 51 applied-voltage values.
-sensedVoltage = zeros(1, 51); % Preallocate space for 51 measured-voltage values.
+appliedVoltage = zeros(1, 201); % Preallocate space for 51 applied-voltage values.
+sensedVoltage = zeros(1, 201); % Preallocate space for 51 measured-voltage values.
 sampleCount = 0; % Count how many complete voltage pairs have been received.
 fprintf("Reading voltage samples from %s...\n", port); % Announce that serial capture has started.
 
-while sampleCount < 51 % Keep reading until 51 valid pairs have been received.
+while sampleCount < 201 % Keep reading until 51 valid pairs have been received.
 	line = strtrim(readline(arduino)); % Read one complete serial line and remove whitespace at its ends.
 	values = str2double(split(line, ",")); % Split a comma-separated line and convert its values to numbers.
 
@@ -51,3 +51,16 @@ fprintf("Fitted line coefficients: slope = %.3f, y-intercept = %.3f\n", p(1), p(
 
 xintercept = -p(2)/p(1); % Calculate the x-intercept of the fitted line. Which is also the voltage threshold
 fprintf("X-intercept of the fitted line: %.3f V\n", xintercept); % Print the x-intercept.
+% 1. Define your two vectors (must be column vectors or same length)
+
+
+% 2. Combine them side-by-side into a matrix
+tableData = [appliedVoltage.', sensedVoltage.'];
+
+% 3. Create a figure window
+fig = figure('Position', [100, 100, 400, 300]);
+
+% 4. Create the uitable component on the figure
+uit = uitable(fig, 'Data', tableData, ...
+                   'ColumnName', {'Applied Voltage (V)', 'Sensed Voltage (V)'}, ...
+                   'Position', [50, 50, 300, 200]);
