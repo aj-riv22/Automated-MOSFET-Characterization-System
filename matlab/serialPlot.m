@@ -1,5 +1,5 @@
 port = "COM3"; % Select the Arduino's serial port.
-arduino = serialport(port, 115200, "Timeout", 10); % Open the port at 115200 baud; wait at most 10 seconds when reading.
+arduino = serialport(port, 115200, "Timeout", 20); % Open the port at 115200 baud; wait at most 5 seconds when reading.
 configureTerminator(arduino, "LF"); % Treat a line feed as the end of each incoming line.
 
 appliedVoltage = zeros(1, 201); % Preallocate space for 51 applied-voltage values.
@@ -7,6 +7,7 @@ sensedVoltage = zeros(1, 201); % Preallocate space for 51 measured-voltage value
 sampleCount = 0; % Count how many complete voltage pairs have been received.
 fprintf("Reading voltage samples from %s...\n", port); % Announce that serial capture has started.
 
+	
 while sampleCount < 201 % Keep reading until 51 valid pairs have been received.
 	line = strtrim(readline(arduino)); % Read one complete serial line and remove whitespace at its ends.
 	values = str2double(split(line, ",")); % Split a comma-separated line and convert its values to numbers.
@@ -19,6 +20,14 @@ while sampleCount < 201 % Keep reading until 51 valid pairs have been received.
 	end % Ignore startup and cycle-status lines that are not numeric pairs.
 end % Finish collecting after both arrays contain 51 values.
 
+
+% for i = 1:sampleCount % Loop through all the collected samples.
+% 	if sensedVoltage(i) < 0.001 || sensedVoltage(i) > 0.1
+% 		% delete the sample in both arrays if the sensed voltage is zero or greater than 0.1 V
+% 		appliedVoltage(i) = NaN; % Mark the applied voltage as NaN (
+% 		sensedVoltage(i) = NaN; % Mark the sensed voltage as NaN (not a number).
+% 	end
+% end
 clear arduino; % Close the serial connection; keep the voltage arrays in the workspace.
 fprintf("Capture complete: %d voltage pairs received.\n", sampleCount); % Report that all samples were collected.
 

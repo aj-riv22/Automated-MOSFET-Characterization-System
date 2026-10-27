@@ -17,7 +17,8 @@ The repository includes:
 - Git
 - Visual Studio Code
 - PlatformIO IDE extension (recommended) or PlatformIO Core CLI
-- A modern browser such as Chrome or Edge for the web dashboard
+- Python 3.10 or newer
+- A modern browser for the web dashboard
 
 ## 1) Install Git
 
@@ -131,32 +132,51 @@ You should see data in the format:
 
 This is the applied voltage and sensed voltage for each sweep step.
 
-## 8) Run the browser dashboard
+## 8) Run the Flask dashboard
 
-The repo includes a lightweight web interface in `web/index.html` for visualization.
+The Flask web interface uses the existing dashboard in `web/index.html` and reads the Arduino's serial output on the computer running Flask.
 
-### Option A: Open directly in a browser
-1. Open `web/index.html` in a browser that supports Web Serial (Chrome or Edge recommended).
-2. Connect to the board's serial port when prompted.
-3. Start the sweep or data collection from the page.
+Install the Python dependencies:
 
-### Option B: Serve it locally
-From the project root:
+```powershell
+python -m pip install -r requirements.txt
+```
+
+Close any other program using the Arduino's serial port (including PlatformIO's serial monitor), then start the dashboard with one of these options:
 
 ```bash
-cd Automated-MOSFET-Characterization-System
-python -m http.server 8000
+python app.py
 ```
 
-Then open in a browser:
+On Windows, you can instead double-click `start_dashboard.bat`. It starts Flask, waits for the server to respond, and opens the dashboard in your browser. Keep the Flask console window open while using the dashboard; press `Ctrl+C` there to stop the server.
+
+Open the local address in a browser:
 
 ```text
-http://localhost:8000/web/
+http://127.0.0.1:5000
 ```
+
+Select the Arduino's detected serial port and click **Connect & capture**. The dashboard reads voltage pairs at 115200 baud; use **Stop** to disconnect. The application is bound to the local computer and does not expose the serial port to other devices.
+
+The dashboard plots sensed voltage against applied voltage by default. Select **Square-root fit** to plot the square root of sensed voltage and overlay a linear regression; the slope, intercept, and x-intercept (threshold estimate) update as readings arrive. Negative sensed values are excluded from this fit.
 
 ## 9) MATLAB plotting (optional)
 
 If you want to analyze the captured serial data in MATLAB, open `matlab/serialPlot.m` and adjust the serial port settings if needed.
+
+## JavaScript linear regression (optional)
+
+Use `linear_regression.js` to fit a line to two arrays of already-linearized data. It returns the slope and y-intercept:
+
+```js
+const linearRegression = require("./linear_regression.js");
+const { slope, intercept } = linearRegression([1, 2, 3], [3, 5, 7]);
+
+console.log(slope);     // 2
+console.log(intercept); // 1
+```
+
+In a browser, include the file with a script tag and call the global `linearRegression(xValues, yValues)` function. Both arrays must contain the same number of finite values, at least two, and the x-values must not all be identical.
 
 ## 10) Typical workflow
 
@@ -202,8 +222,9 @@ Try restarting VS Code after installing the extension or open a new terminal aft
 ## Useful project files
 - `platformio.ini` — PlatformIO board and configuration
 - `src/main.cpp` — main firmware logic
-- `web/index.html` — browser-based visualization
+- `app.py` — Flask application and serial reader
+- `requirements.txt` — Flask and pyserial dependencies
+- `web/index.html` — Flask-served dashboard and visualization
+- `linear_regression.js` — standalone linear regression helper
 - `matlab/serialPlot.m` — MATLAB plotting helper
 - `experiments/` — test sketches and exploratory code
-
-
